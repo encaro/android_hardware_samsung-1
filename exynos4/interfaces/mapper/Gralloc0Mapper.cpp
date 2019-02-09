@@ -29,26 +29,30 @@ namespace implementation {
 Gralloc0Mapper::Gralloc0Mapper(const hw_module_t* module)
     : mModule(reinterpret_cast<const gralloc_module_t*>(module)),
       mMinor(module->module_api_version & 0xff) {
-    mCapabilities.highUsageBits = false;
-    mCapabilities.layeredBuffers = false;
-    mCapabilities.unregisterImplyDelete = false;
+    mCapabilities.highUsageBits = true;
+    mCapabilities.layeredBuffers = true;
+    mCapabilities.unregisterImplyDelete = true;
 }
 
 Error Gralloc0Mapper::registerBuffer(buffer_handle_t bufferHandle) {
+    ALOGE("%s", __func__);
     int result = mModule->registerBuffer(mModule, bufferHandle);
     return result ? Error::BAD_BUFFER : Error::NONE;
 }
 
 void Gralloc0Mapper::unregisterBuffer(buffer_handle_t bufferHandle) {
+    ALOGE("%s", __func__);
     mModule->unregisterBuffer(mModule, bufferHandle);
 }
 
 Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
                                  uint64_t cpuUsage,
-                                 const IMapper::Rect& accessRegion, int fenceFd,
+                                 const IMapper::Rect& accessRegion, int /* fenceFd */,
                                  void** outData) {
+    ALOGE("%s", __func__);
     int result;
     void* data = nullptr;
+#if 0
     if (mMinor >= 3 && mModule->lockAsync) {
         // Dup fenceFd as it is going to be owned by gralloc.  Note that it is
         // gralloc's responsibility to close it, even on locking errors.
@@ -65,11 +69,13 @@ Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
                                     &data, fenceFd);
     } else {
         waitFenceFd(fenceFd, "Gralloc0Mapper::lock");
-
+#endif
         result = mModule->lock(mModule, bufferHandle, cpuUsage,
                                accessRegion.left, accessRegion.top,
                                accessRegion.width, accessRegion.height, &data);
+#if 0
     }
+#endif
 
     if (result) {
         return Error::BAD_VALUE;
@@ -81,10 +87,12 @@ Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
 
 Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
                                  uint64_t cpuUsage,
-                                 const IMapper::Rect& accessRegion, int fenceFd,
+                                 const IMapper::Rect& accessRegion, int /* fenceFd */,
                                  YCbCrLayout* outLayout) {
+    ALOGE("%s", __func__);
     int result;
     android_ycbcr ycbcr = {};
+#if 0
     if (mMinor >= 3 && mModule->lockAsync_ycbcr) {
         // Dup fenceFd as it is going to be owned by gralloc.  Note that it is
         // gralloc's responsibility to close it, even on locking errors.
@@ -101,7 +109,7 @@ Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
                                           accessRegion.height, &ycbcr, fenceFd);
     } else {
         waitFenceFd(fenceFd, "Gralloc0Mapper::lockYCbCr");
-
+#endif
         if (mModule->lock_ycbcr) {
             result = mModule->lock_ycbcr(mModule, bufferHandle, cpuUsage,
                                          accessRegion.left, accessRegion.top,
@@ -110,7 +118,9 @@ Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
         } else {
             result = -EINVAL;
         }
+#if 0
     }
+#endif
 
     if (result) {
         return Error::BAD_VALUE;
@@ -127,6 +137,7 @@ Error Gralloc0Mapper::lockBuffer(buffer_handle_t bufferHandle,
 
 Error Gralloc0Mapper::unlockBuffer(buffer_handle_t bufferHandle,
                                    int* outFenceFd) {
+    ALOGE("%s", __func__);
     int result;
     int fenceFd = -1;
     if (mMinor >= 3 && mModule->unlockAsync) {

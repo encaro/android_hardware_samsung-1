@@ -221,12 +221,13 @@ gralloc1_error_t Gralloc1On0Adapter::destroyDescriptor(
 
 Gralloc1On0Adapter::Buffer::Buffer(buffer_handle_t handle,
         gralloc1_backing_store_t store, const Descriptor& descriptor,
-        uint32_t stride, uint32_t /* numFlexPlanes */, bool wasAllocated)
+        uint32_t stride, uint32_t numFlexPlanes, bool wasAllocated)
   : mHandle(handle),
     mReferenceCount(1),
     mStore(store),
     mDescriptor(descriptor),
     mStride(stride),
+    mNumFlexPlanes(numFlexPlanes),
     mWasAllocated(wasAllocated) {}
 
 gralloc1_error_t Gralloc1On0Adapter::allocate(

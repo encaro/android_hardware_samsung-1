@@ -32,9 +32,3 @@ cc_library_shared {
         "libutils",
     ],
 }
-
-cc_library_headers {
-    name: "libgrallocmapperincludes",
-    vendor: true,
-    export_include_dirs: ["."],
-}

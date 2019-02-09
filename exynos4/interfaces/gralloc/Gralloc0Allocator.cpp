@@ -61,6 +61,7 @@ Return<void> Gralloc0Allocator::dumpDebugInfo(dumpDebugInfo_cb hidl_cb) {
 
 Return<void> Gralloc0Allocator::allocate(const BufferDescriptor& descriptor,
                                          uint32_t count, allocate_cb hidl_cb) {
+    ALOGE("%s: count=%d", __func__, count);
     IMapper::BufferDescriptorInfo descriptorInfo;
     if (!grallocDecodeBufferDescriptor(descriptor, &descriptorInfo)) {
         hidl_cb(Error::BAD_DESCRIPTOR, 0, hidl_vec<hidl_handle>());
@@ -112,7 +113,9 @@ Return<void> Gralloc0Allocator::allocate(const BufferDescriptor& descriptor,
 Error Gralloc0Allocator::allocateOne(const IMapper::BufferDescriptorInfo& info,
                                      buffer_handle_t* outBuffer,
                                      uint32_t* outStride) {
+    ALOGE("%s: layerCount=%d, usage=%llx", __func__, info.layerCount, info.usage);
     if (info.layerCount > 1 || (info.usage >> 32) != 0) {
+        ALOGE("%s: bad usage=%llx", __func__, info.usage);
         return Error::BAD_VALUE;
     }
 

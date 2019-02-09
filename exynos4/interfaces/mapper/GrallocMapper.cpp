@@ -184,7 +184,8 @@ Return<Error> GrallocMapper::freeBuffer(void* buffer) {
     return Error::NONE;
 }
 
-void GrallocMapper::waitFenceFd(int fenceFd, const char* logname) {
+void GrallocMapper::waitFenceFd(int /*fenceFd*/, const char* /*logname*/) {
+#if 0
     if (fenceFd < 0) {
         return;
     }
@@ -196,18 +197,23 @@ void GrallocMapper::waitFenceFd(int fenceFd, const char* logname) {
               warningTimeout);
         sync_wait(fenceFd, -1);
     }
+#endif
 }
 
-bool GrallocMapper::getFenceFd(const hidl_handle& fenceHandle,
-                               int* outFenceFd) {
+bool GrallocMapper::getFenceFd(const hidl_handle& /*fenceHandle*/,
+                               int* /*outFenceFd*/) {
+#if 0
     auto handle = fenceHandle.getNativeHandle();
     if (handle && handle->numFds > 1) {
         ALOGE("invalid fence handle with %d fds", handle->numFds);
+#endif
         return false;
+#if 0
     }
 
     *outFenceFd = (handle && handle->numFds == 1) ? handle->data[0] : -1;
     return true;
+#endif
 }
 
 hidl_handle GrallocMapper::getFenceHandle(int fenceFd, char* handleStorage) {
@@ -222,7 +228,7 @@ hidl_handle GrallocMapper::getFenceHandle(int fenceFd, char* handleStorage) {
 
 Return<void> GrallocMapper::lock(void* buffer, uint64_t cpuUsage,
                                  const IMapper::Rect& accessRegion,
-                                 const hidl_handle& acquireFence,
+                                 const hidl_handle& /*acquireFence*/,
                                  lock_cb hidl_cb) {
     buffer_handle_t bufferHandle = gRegisteredHandles->get(buffer);
     if (!bufferHandle) {
@@ -230,12 +236,13 @@ Return<void> GrallocMapper::lock(void* buffer, uint64_t cpuUsage,
         return Void();
     }
 
-    int fenceFd;
+    int fenceFd = -1;
+#if 0
     if (!getFenceFd(acquireFence, &fenceFd)) {
         hidl_cb(Error::BAD_VALUE, nullptr);
         return Void();
     }
-
+#endif
     void* data = nullptr;
     Error error =
         lockBuffer(bufferHandle, cpuUsage, accessRegion, fenceFd, &data);
@@ -246,7 +253,7 @@ Return<void> GrallocMapper::lock(void* buffer, uint64_t cpuUsage,
 
 Return<void> GrallocMapper::lockYCbCr(void* buffer, uint64_t cpuUsage,
                                       const IMapper::Rect& accessRegion,
-                                      const hidl_handle& acquireFence,
+                                      const hidl_handle& /*acquireFence*/,
                                       lockYCbCr_cb hidl_cb) {
     YCbCrLayout layout = {};
 
@@ -256,12 +263,13 @@ Return<void> GrallocMapper::lockYCbCr(void* buffer, uint64_t cpuUsage,
         return Void();
     }
 
-    int fenceFd;
+    int fenceFd = -1;
+#if 0
     if (!getFenceFd(acquireFence, &fenceFd)) {
         hidl_cb(Error::BAD_VALUE, layout);
         return Void();
     }
-
+#endif
     Error error =
         lockBuffer(bufferHandle, cpuUsage, accessRegion, fenceFd, &layout);
 
@@ -303,8 +311,10 @@ IMapper* HIDL_FETCH_IMapper(const char* /* name */) {
 
     uint8_t major = (module->module_api_version >> 8) & 0xff;
     switch (major) {
+#if 0
         case 1:
             return new Gralloc1Mapper(module);
+#endif
         case 0:
             return new Gralloc0Mapper(module);
         default:
