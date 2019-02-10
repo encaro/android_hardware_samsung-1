@@ -62,36 +62,41 @@ Return<void> Gralloc0Allocator::dumpDebugInfo(dumpDebugInfo_cb hidl_cb) {
 Return<void> Gralloc0Allocator::allocate(const BufferDescriptor& descriptor,
                                          uint32_t count, allocate_cb hidl_cb) {
     ALOGE("%s: count=%d", __func__, count);
-    IMapper::BufferDescriptorInfo descriptorInfo;
-    if (!grallocDecodeBufferDescriptor(descriptor, &descriptorInfo)) {
+    IMapper::BufferDescriptorInfo info;
+    if (!grallocDecodeBufferDescriptor(descriptor, &info)) {
         hidl_cb(Error::BAD_DESCRIPTOR, 0, hidl_vec<hidl_handle>());
         return Void();
     }
 
     Error error = Error::NONE;
-    uint32_t stride = 0;
+    int stride = 0;
     std::vector<hidl_handle> buffers;
+    count = 1;
     buffers.reserve(count);
 
-    // allocate the buffers
-    for (uint32_t i = 0; i < count; i++) {
-        buffer_handle_t tmpBuffer;
-        uint32_t tmpStride;
-        error = allocateOne(descriptorInfo, &tmpBuffer, &tmpStride);
-        if (error != Error::NONE) {
-            break;
-        }
+    buffer_handle_t tmpBuffer;
 
-        if (stride == 0) {
-            stride = tmpStride;
-        } else if (stride != tmpStride) {
-            // non-uniform strides
-            mDevice->free(mDevice, tmpBuffer);
-            stride = 0;
-            error = Error::UNSUPPORTED;
-            break;
-        }
+    uint32_t usage = static_cast<uint32_t>(info.usage) & GRALLOC_USAGE_ALLOC_MASK;
 
+    status_t err = mDevice->alloc(mDevice, static_cast<int>(info.width),
+            static_cast<int>(info.height), static_cast<int>(info.format), static_cast<int>(usage), &tmpBuffer,
+            &stride);
+
+    ALOGW_IF(err, "alloc(%u, %u, %d, %llx, ...) failed %d (%s)",
+            info.width, info.height, info.format, info.usage, err, strerror(-err));
+
+    error = Error::NONE;
+
+    if (err) {
+        switch (err) {
+            case -EINVAL:
+                error = Error::BAD_VALUE;
+            default:
+                error = Error::NO_RESOURCES;
+        }
+    }
+
+    if (error == Error::NONE) {
         buffers.emplace_back(hidl_handle(tmpBuffer));
     }
 
@@ -100,7 +105,7 @@ Return<void> Gralloc0Allocator::allocate(const BufferDescriptor& descriptor,
     if (error == Error::NONE) {
         hidl_buffers.setToExternal(buffers.data(), buffers.size());
     }
-    hidl_cb(error, stride, hidl_buffers);
+    hidl_cb(error, static_cast<uint32_t>(stride), hidl_buffers);
 
     // free the buffers
     for (const auto& buffer : buffers) {
@@ -114,16 +119,11 @@ Error Gralloc0Allocator::allocateOne(const IMapper::BufferDescriptorInfo& info,
                                      buffer_handle_t* outBuffer,
                                      uint32_t* outStride) {
     ALOGE("%s: layerCount=%d, usage=%llx", __func__, info.layerCount, info.usage);
-    if (info.layerCount > 1 || (info.usage >> 32) != 0) {
-        ALOGE("%s: bad usage=%llx", __func__, info.usage);
-        return Error::BAD_VALUE;
-    }
 
-    buffer_handle_t buffer = nullptr;
     int stride = 0;
     int result = mDevice->alloc(mDevice, info.width, info.height,
                                 static_cast<int>(info.format), info.usage,
-                                &buffer, &stride);
+                                outBuffer, &stride);
     if (result) {
         switch (result) {
             case -EINVAL:
@@ -133,7 +133,6 @@ Error Gralloc0Allocator::allocateOne(const IMapper::BufferDescriptorInfo& info,
         }
     }
 
-    *outBuffer = buffer;
     *outStride = stride;
 
     return Error::NONE;
