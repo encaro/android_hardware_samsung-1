@@ -690,7 +690,7 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
         const size_t bufferSize = m->finfo.line_length * m->info.yres;
         int index = (hnd->base - m->framebuffer->base) / bufferSize;
 
-        m->bufferMask &= ~(1<<index);
+        //m->bufferMask &= ~(1<<index);
         close(hnd->fd);
 
     } else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_UMP) {
