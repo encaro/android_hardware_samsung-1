@@ -107,12 +107,10 @@ Return<void> Gralloc0Allocator::allocate(const BufferDescriptor& descriptor,
     }
     hidl_cb(error, static_cast<uint32_t>(stride), hidl_buffers);
 
-#if 0
     // free the buffers
     for (const auto& buffer : buffers) {
         mDevice->free(mDevice, buffer.getNativeHandle());
     }
-#endif
 
     return Void();
 }
