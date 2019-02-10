@@ -668,19 +668,11 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format,
     return 0;
 }
 
-static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
+static int buffer_free(buffer_handle_t handle, private_module_t* m)
 {
-    if (private_handle_t::validate(handle) < 0)
-        return -EINVAL;
-
-    ALOGD_IF(debug_level > 0, "%s",__func__);
-
     private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(handle);
-    private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
-    ALOGD_IF(debug_partial_flush > 0, "%s: PARTIAL_FLUSH ump_id:%d ump_mem_handle:%08x flags=%x usage=%x", __func__, hnd->ump_id, hnd->ump_mem_handle, hnd->flags, hnd->usage);
-
-    ALOGD_IF(debug_level > 1, "%s: ump_id:%d", __func__, hnd->ump_id);
     pthread_mutex_lock(&l_surface);
+
     if (hnd->flags & private_handle_t::PRIV_FLAGS_GRAPHICBUFFER) {
         ALOGD_IF(debug_level > 0, "%s: GraphicBuffer (ump_id:%d): Freeing ump_mem_handle:%08x", __func__, hnd->ump_id, hnd->ump_mem_handle);
     }
@@ -692,7 +684,6 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 
         m->bufferMask &= ~(1<<index);
         close(hnd->fd);
-
     } else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_UMP) {
         ALOGD_IF(debug_level > 0, "%s hnd->ump_mem_handle:%08x hnd->ump_id=%d", __func__, hnd->ump_mem_handle, hnd->ump_id);
 
@@ -730,6 +721,57 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
     delete hnd;
 
     return 0;
+}
+
+struct alloc_data_struct {
+    buffer_handle_t handle;
+    private_module_t* module;
+} alloc_data;
+
+void* buffer_free_thread_fn(void *data) {
+    struct alloc_data_struct *alloc_data_ptr = (struct alloc_data_struct*)data;
+    buffer_handle_t handle = (buffer_handle_t)alloc_data_ptr->handle;
+    private_module_t* m = (private_module_t*)alloc_data_ptr->module;
+
+    usleep(1000000); // 1000ms
+    buffer_free(handle, m);
+    return NULL;
+}
+
+static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
+{
+    if (private_handle_t::validate(handle) < 0)
+        return -EINVAL;
+
+    ALOGD_IF(debug_level > 0, "%s",__func__);
+
+    private_handle_t const* hnd = reinterpret_cast<private_handle_t const*>(handle);
+    private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
+    ALOGD_IF(debug_partial_flush > 0, "%s: PARTIAL_FLUSH ump_id:%d ump_mem_handle:%08x flags=%x usage=%x", __func__, hnd->ump_id, hnd->ump_mem_handle, hnd->flags, hnd->usage);
+
+    ALOGD_IF(debug_level > 1, "%s: ump_id:%d", __func__, hnd->ump_id);
+
+    if (hnd->flags & private_handle_t::PRIV_FLAGS_FRAMEBUFFER) {
+        pthread_attr_t thread_attr;
+        pthread_t free_buffer_thread;
+
+        pthread_attr_init(&thread_attr);
+        pthread_attr_setdetachstate(&thread_attr, PTHREAD_CREATE_DETACHED);
+
+        alloc_data.handle = handle;
+        alloc_data.module = m;
+        int rc = pthread_create(&free_buffer_thread, &thread_attr,
+	                  buffer_free_thread_fn, (void *) &alloc_data);
+        if (rc < 0) {
+            ALOGE("%s: Unable to create thread", __func__);
+            goto cleanup;
+        }
+
+        return 0;
+    }
+
+cleanup:
+    return buffer_free(handle, m);
 }
 
 static int alloc_device_close(struct hw_device_t *device)
