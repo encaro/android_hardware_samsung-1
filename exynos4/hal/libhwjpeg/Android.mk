@@ -15,6 +15,8 @@
 LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS += -Wno-error
+
 LOCAL_C_INCLUDES := $(LOCAL_PATH) \
     bionic/libc/include \
 	$(LOCAL_PATH)/../include

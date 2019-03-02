@@ -4,6 +4,8 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := optional
 
+LOCAL_CFLAGS += -Wno-error
+
 LOCAL_SRC_FILES:= \
     secril-client-sap.cpp
 
@@ -14,7 +16,7 @@ LOCAL_SHARED_LIBRARIES := \
     libhardware_legacy \
     liblog
 
-LOCAL_CFLAGS := 
+LOCAL_CFLAGS +=
 
 LOCAL_MODULE:= libsecril-client-sap
 LOCAL_PRELINK_MODULE := false

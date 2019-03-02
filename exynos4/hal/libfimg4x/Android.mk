@@ -4,6 +4,8 @@ include $(CLEAR_VARS)
 ifeq ($(BOARD_USES_FIMGAPI),true)
 LOCAL_MODULE_TAGS := optional
 
+LOCAL_CFLAGS += -Wno-error
+
 LOCAL_SRC_FILES:= \
 	FimgApi.cpp   \
 	FimgExynos4.cpp
