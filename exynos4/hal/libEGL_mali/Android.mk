@@ -27,16 +27,18 @@ LOCAL_C_INCLUDES := \
         frameworks/native/libs/arect/include \
         system/core/include
 
-LOCAL_SHARED_LIBRARIES := liblog libcutils
-
 LOCAL_CFLAGS := -DLOG_TAG=\"EGL_mali\"
 
 ifeq ($(TARGET_NEEDS_NATIVE_WINDOW_FORMAT_FIX),true)
 LOCAL_CFLAGS += -DNEEDS_NATIVE_WINDOW_FORMAT_FIX
 endif
 
+ifeq ($(TARGET_NEEDS_DESTROY_SURFACE_AFTER_DETACH),true)
+LOCAL_CFLAGS += -DDESTROY_SURFACE_AFTER_DETACH
+endif
+
 LOCAL_SRC_FILES := shim.S eglApi.cpp
-LOCAL_SHARED_LIBRARIES := libMali
+LOCAL_SHARED_LIBRARIES := libMali liblog libcutils
 
 LOCAL_MODULE := libEGL_mali
 LOCAL_MODULE_TAGS := optional
